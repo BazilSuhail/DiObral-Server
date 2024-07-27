@@ -49,10 +49,10 @@ exports.getOrders = async (req, res) => {
             return res.status(404).send({ message: 'No orders found for this user' });
         }
 
-        console.log('User orders:', userOrders);
+        //console.log('User orders:', userOrders);
         res.status(200).send(userOrders);
     } catch (error) {
-        console.error('Error fetching orders:', error);
+        //console.error('Error fetching orders:', error);
         res.status(500).send({ message: 'Server error' });
     }
 };

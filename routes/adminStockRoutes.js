@@ -7,4 +7,8 @@ const userController = require('../controllers/adminStockController');
 router.get('/users-with-orders', userController.getUsersWithOrders);
 router.get('/orders/:id', userController.getOrderById);
 router.get('/order-detail/:orderId', userController.getOrderDetails);
+
+router.post('/:userId/:orderId', userController.completeOrder);
+
+
 module.exports = router;

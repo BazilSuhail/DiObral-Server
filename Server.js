@@ -34,5 +34,7 @@ app.use('/api/place-order', require('./routes/orderRoutes'));
 
 app.use('/api/completeorder', require('./routes/adminStockRoutes'));
 
+app.use('/api', require('./routes/productReviewRoutes'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

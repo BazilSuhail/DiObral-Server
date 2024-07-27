@@ -2,40 +2,85 @@
 
 const Order = require('../models/Order'); // Adjust path as necessary
 const Profile = require('../models/profile'); // Adjust path as necessary
+ 
+const CompletedOrder = require('../models/completedOrder'); // Path to your completed order model
+
+// Complete an order
+exports.completeOrder = async (req, res) => {
+    const { userId, orderId } = req.params;
+
+    try {
+        // Find the order
+        const order = await Order.findOne({ userId });
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Find the order to move
+        const orderIndex = order.orders.findIndex(o => o._id.toString() === orderId);
+        if (orderIndex === -1) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // Move the order to completedOrders
+        const [orderToComplete] = order.orders.splice(orderIndex, 1);
+        let completedOrder = await CompletedOrder.findOne({ userId });
+
+        if (!completedOrder) {
+            // If no completed order document exists, create one
+            completedOrder = new CompletedOrder({
+                userId,
+                completedOrders: [orderToComplete]
+            });
+        } else {
+            // If exists, update it
+            completedOrder.completedOrders.push(orderToComplete);
+        }
+
+        // Save both documents
+        await completedOrder.save();
+        await order.save();
+
+        res.status(200).json({ message: 'Order completed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+/*
+
+module.exports = {
+    completeOrder
+};
+
+*/
 
 // Get all users with their orders
 exports.getUsersWithOrders = async (req, res) => {
     try {
-        // Fetch all orders with userId and orders array
-        const orders = await Order.find({}, '_id userId orders').lean();
-        //console.log('Orders:', orders); // Log raw Mongoose documents
         
-        // Extract userIds from orders
-        const userIds = [...new Set(orders.map(order => order.userId))];
-       // console.log('User IDs:', userIds); // Log unique user IDs
+        const orders = await Order.find({}, '_id userId orders').lean();
+        console.log('Orders:', orders); 
+         const userIds = [...new Set(orders.map(order => order.userId))];
+        console.log('User IDs:', userIds); 
         
         if (userIds.length === 0) {
-            return res.json([]); // No orders, return empty array
+            return res.json([]);
         }
-
-        // Fetch profiles for the userIds
+ 
         const profiles = await Profile.find({ _id: { $in: userIds } }).select('_id fullName').lean();
-        //console.log('Profiles:', profiles); // Log raw Mongoose documents
-
-        // Create a map of userId to fullName
-        const userMap = {};
+        //console.log('Profiles:', profiles);
+         const userMap = {};
         profiles.forEach(profile => {
             userMap[profile._id.toString()] = profile.fullName;
         });
-
-        // Combine orders with fullName and order count
+ 
         const usersWithOrders = orders.map(order => ({
-            documentId: order._id.toString(), // Include the document ID
+            documentId: order._id.toString(), 
             userId: order.userId,
-            fullName: userMap[order.userId] || 'Unknown', // Use 'Unknown' if fullName not found
+            fullName: userMap[order.userId] || 'Unknown', 
             orderCount: order.orders.length
         }));
-       // console.log('Users with Orders:', usersWithOrders); // Log user data with fullName and orderCount
+       // console.log('Users with Orders:', usersWithOrders); /
 
         res.json(usersWithOrders);
     } catch (err) {
