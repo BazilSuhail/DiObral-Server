@@ -22,7 +22,7 @@ app.use('/api/products', require('./routes/productRoutes'));
 
 app.use('/api/category', require('./routes/categoryRoutes'));
 
-app.use('/api/subcategories',  require('./routes/subcategoryRoutes'));
+app.use('/api/subcategories', require('./routes/subcategoryRoutes'));
 
 app.use('/api/fetchproducts', require('./routes/fetchProductsRoutes'));
 
@@ -35,6 +35,7 @@ app.use('/api/place-order', require('./routes/orderRoutes'));
 app.use('/api/completeorder', require('./routes/adminStockRoutes'));
 
 app.use('/api', require('./routes/productReviewRoutes'));
+ 
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

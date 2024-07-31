@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ProductReview = require('../models/ProductReview'); // Your ProductReview model
+const ProductReview = require('../models/productReview'); // Your ProductReview model
 
 // Route to handle review submission
 router.post('/reviews', async (req, res) => {
@@ -22,6 +22,7 @@ router.post('/reviews', async (req, res) => {
         if (productReview) {
             // If exists, push the new review into the reviews array
             productReview.reviews.push(review);
+            //console.log(productReview);
             await productReview.save();
         } else {
             // If not exists, create a new review document
@@ -41,23 +42,14 @@ router.post('/reviews', async (req, res) => {
 // Route to handle review fetching with pagination
 router.get('/reviews/:productId', async (req, res) => {
     try {
-        const { productId } = req.params;
-        const { page = 1, limit = 4 } = req.query;
-        const skip = (page - 1) * limit;
-
-        const productReviews = await ProductReview.findOne({ productId }).select('reviews').exec();
-
-        if (!productReviews) {
-            return res.status(404).json({ message: 'Product not found' });
+        const productId = req.params.productId;
+        const reviews = await ProductReview.findOne({ productId: productId });
+        if (!reviews) {
+            return res.status(404).json({ message: 'Reviews not found for this product.' });
         }
-
-        const reviews = productReviews.reviews.slice(skip, skip + parseInt(limit));
-        res.json({
-            reviews,
-            hasMore: (skip + limit) < productReviews.reviews.length
-        });
+        res.status(200).json(reviews);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error', error });
     }
 });
 module.exports = router;

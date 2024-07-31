@@ -59,10 +59,9 @@ exports.getUsersWithOrders = async (req, res) => {
     try {
         
         const orders = await Order.find({}, '_id userId orders').lean();
-        console.log('Orders:', orders); 
-         const userIds = [...new Set(orders.map(order => order.userId))];
-        console.log('User IDs:', userIds); 
         
+        const userIds = [...new Set(orders.map(order => order.userId))];
+         
         if (userIds.length === 0) {
             return res.json([]);
         }
