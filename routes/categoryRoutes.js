@@ -3,7 +3,6 @@
 const express = require('express');
 const router = express.Router(); 
 
-
 // Route to get all categories 
 
 const {

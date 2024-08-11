@@ -57,29 +57,30 @@ module.exports = {
 // Get all users with their orders
 exports.getUsersWithOrders = async (req, res) => {
     try {
-        
         const orders = await Order.find({}, '_id userId orders').lean();
-        
         const userIds = [...new Set(orders.map(order => order.userId))];
          
         if (userIds.length === 0) {
             return res.json([]);
         }
  
-        const profiles = await Profile.find({ _id: { $in: userIds } }).select('_id fullName').lean();
-        //console.log('Profiles:', profiles);
-         const userMap = {};
+        const profiles = await Profile.find({ _id: { $in: userIds } }).select('_id fullName email contact').lean();
+        const userMap = {};
         profiles.forEach(profile => {
-            userMap[profile._id.toString()] = profile.fullName;
+            userMap[profile._id.toString()] = profile;
         });
  
-        const usersWithOrders = orders.map(order => ({
-            documentId: order._id.toString(), 
-            userId: order.userId,
-            fullName: userMap[order.userId] || 'Unknown', 
-            orderCount: order.orders.length
-        }));
-       // console.log('Users with Orders:', usersWithOrders); /
+        const usersWithOrders = orders.map(order => {
+            const profile = userMap[order.userId];
+            return {
+                documentId: order._id.toString(),
+                userId: order.userId,
+                fullName: profile ? profile.fullName : 'Unknown',
+                email: profile ? profile.email : 'N/A',
+                contact: profile ? profile.contact : 'N/A',
+                orderCount: order.orders.length
+            };
+        });
 
         res.json(usersWithOrders);
     } catch (err) {

@@ -1,13 +1,19 @@
 const Order = require('../models/Order');
 
+
 // Save order for a user
 exports.saveOrder = async (req, res) => {
     const { userId } = req.params;
     const { items, orderDate, total } = req.body;
 
+    if (!userId || !items || !orderDate || !total) {
+        return res.status(400).json({ message: 'Missing required fields' });
+    }
+
     try {
         // Check if the user already has orders
         let userOrder = await Order.findOne({ userId });
+
         if (!userOrder) {
             // If not, create a new order document
             userOrder = new Order({
@@ -28,11 +34,12 @@ exports.saveOrder = async (req, res) => {
                 total
             });
         }
+
         await userOrder.save();
         res.status(200).json(userOrder);
     } catch (error) {
         console.error('Error saving order:', error);
-        res.status(500).json({ message: 'Error saving order', error });
+        res.status(500).json({ message: 'Error saving order', error: error.message });
     }
 };
 

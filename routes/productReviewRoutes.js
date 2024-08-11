@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ProductReview = require('../models/productReview'); // Your ProductReview model
 
+
 // Route to handle review submission
 router.post('/reviews', async (req, res) => {
     try {
@@ -52,4 +53,5 @@ router.get('/reviews/:productId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 });
+
 module.exports = router;

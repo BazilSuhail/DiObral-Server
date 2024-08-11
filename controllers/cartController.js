@@ -1,4 +1,3 @@
-// controllers/cartController.js
 const CartState = require('../models/cart');
 
 // Save cart state for a user
@@ -6,6 +5,7 @@ exports.saveCart = async (req, res) => {
     const { userId, items } = req.body;
 
     try {
+        // Ensure items include the size field
         const cart = await CartState.findOneAndUpdate(
             { userId },
             { items },
