@@ -1,6 +1,5 @@
 const Order = require('../models/Order');
 
-
 // Save order for a user
 exports.saveOrder = async (req, res) => {
     const { userId } = req.params;
