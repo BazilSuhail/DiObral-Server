@@ -53,5 +53,40 @@ router.get('/reviews/:productId', async (req, res) => {
         res.status(500).json({ message: 'Server error', error });
     }
 });
+router.get('/reviews/average/:productId', async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const productReview = await ProductReview.findOne({ productId });
+
+        if (!productReview) {
+            return res.status(404).json({ message: 'Reviews not found for this product.' });
+        }
+
+        // Calculate the average rating
+        const totalReviews = productReview.reviews.length;
+        const sumRatings = productReview.reviews.reduce((sum, review) => sum + review.rating, 0);
+        const averageRating = (totalReviews > 0) ? (sumRatings / totalReviews).toFixed(2) : 0; 
+        res.status(200).json({ averageRating: parseFloat(averageRating) });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+});
+
+router.get('/reviews/count/:productId', async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const productReview = await ProductReview.findOne({ productId });
+
+        if (!productReview) {
+            return res.status(404).json({ message: 'Reviews not found for this product.' });
+        }
+
+        const reviewCount = productReview.reviews.length;
+
+        res.status(200).json({ reviewCount });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error });
+    }
+});
 
 module.exports = router;
