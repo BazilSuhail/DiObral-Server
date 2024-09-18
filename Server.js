@@ -6,12 +6,30 @@ require('dotenv').config();
 const path = require('path');
 
 const app = express();
-
-
 // Connect to database
 connectDB();
 
-app.use(cors());
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000', // For local development
+  'https://texleath.netlify.app' // Replace with your Netlify URL
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      // Allow request
+      callback(null, true);
+    } else {
+      // Reject request
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Adjust methods as needed
+  allowedHeaders: ['Content-Type', 'Authorization'] // Adjust headers as needed
+}));
+
+//app.use(cors());
 app.use(express.json());
 
 // Serve static files from the 'uploads' directory
