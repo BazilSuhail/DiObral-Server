@@ -1,7 +1,7 @@
 // controllers/userController.js
 
-const Order = require('../models/Order'); // Adjust path as necessary
-const Profile = require('../models/profile'); // Adjust path as necessary
+const Order = require('../models/order');
+const Profile = require('../models/profile');
  
 const CompletedOrder = require('../models/completedOrder'); // Path to your completed order model
 

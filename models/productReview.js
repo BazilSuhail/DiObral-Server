@@ -12,7 +12,7 @@ const reviewSchema = new mongoose.Schema({
 
 const productReviewSchema = new mongoose.Schema({
     productId: { type: String, required: true, unique: true },
-    reviews: [reviewSchema] // Array of review objects
+    reviews: [reviewSchema]
 });
 
 module.exports = mongoose.model('ProductReview', productReviewSchema);

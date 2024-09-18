@@ -6,7 +6,7 @@ const cartSchema = new mongoose.Schema({
         {
             id: { type: String, required: true },
             quantity: { type: Number, required: true },
-            size: { type: String, required: true }, // Add size field
+            size: { type: String, required: true },
             price: { type: Number, required: true },
         },
     ],

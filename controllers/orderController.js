@@ -1,4 +1,4 @@
-const Order = require('../models/Order');
+const Order = require('../models/order');
 
 // Save order for a user
 exports.saveOrder = async (req, res) => {

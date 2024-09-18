@@ -5,7 +5,7 @@ const orderItemSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     discountedPrice: { type: Number, required: true },
     quantity: { type: Number, required: true },
-    size: { type: String, required: true }  // Add this line for size
+    size: { type: String, required: true }
 });
 
 const individualOrderSchema = new mongoose.Schema({
