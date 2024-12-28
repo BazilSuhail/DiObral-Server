@@ -11,6 +11,7 @@ router.post('/reviews', async (req, res) => {
         if (!productId || !review) {
             return res.status(400).json({ message: 'Product ID and review are required' });
         }
+        console.log(review);
 
         // Validate the review structure
         if (!review.name || !review.email || !review.phone || !review.rating || !review.description) {
