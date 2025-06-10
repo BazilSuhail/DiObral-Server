@@ -21,10 +21,20 @@ const ProductSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  rating: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
   size: [String], // Array of sizes
   stock: {
     type: Number,
     required: true,
+  },
+  reviews: {
+    type: Number,
+    required: true,
+    default: 0, 
   },
   price: {
     type: Number,
@@ -35,12 +45,12 @@ const ProductSchema = new mongoose.Schema({
     default: 0, // Percentage off
   },
   image: {
-    type: String, // URL or path to the main image
+    type: String,
     required: true,
   },
   otherImages: [
     {
-      type: String, // Array of URLs or paths to additional images
+      type: String, 
     },
   ],
 }, {

@@ -2,7 +2,7 @@
 
 const Order = require('../models/order');
 const Profile = require('../models/profile');
- 
+
 const CompletedOrder = require('../models/completedOrder'); // Path to your completed order model
 
 // Complete an order
@@ -21,24 +21,24 @@ exports.completeOrder = async (req, res) => {
         if (orderIndex === -1) {
             return res.status(404).json({ message: 'Order not found' });
         }
-
         // Move the order to completedOrders
         const [orderToComplete] = order.orders.splice(orderIndex, 1);
-        let completedOrder = await CompletedOrder.findOne({ userId });
+        let completeOrder = await CompletedOrder.findOne({ userId });
 
-        if (!completedOrder) {
+        if (!completeOrder) {
             // If no completed order document exists, create one
-            completedOrder = new CompletedOrder({
+            completeOrder = new CompletedOrder({
                 userId,
-                completedOrders: [orderToComplete]
+                completeOrder: [orderToComplete]
             });
         } else {
             // If exists, update it
-            completedOrder.completedOrders.push(orderToComplete);
+            completeOrder.completedOrders.push(orderToComplete);
         }
 
         // Save both documents
-        await completedOrder.save();
+        await completeOrder.save();
+
         await order.save();
 
         res.status(200).json({ message: 'Order completed successfully' });
@@ -59,17 +59,17 @@ exports.getUsersWithOrders = async (req, res) => {
     try {
         const orders = await Order.find({}, '_id userId orders').lean();
         const userIds = [...new Set(orders.map(order => order.userId))];
-         
+
         if (userIds.length === 0) {
             return res.json([]);
         }
- 
+
         const profiles = await Profile.find({ _id: { $in: userIds } }).select('_id fullName email contact').lean();
         const userMap = {};
         profiles.forEach(profile => {
             userMap[profile._id.toString()] = profile;
         });
- 
+
         const usersWithOrders = orders.map(order => {
             const profile = userMap[order.userId];
             return {
@@ -94,7 +94,7 @@ exports.getOrderById = async (req, res) => {
     try {
         const { id } = req.params; // Get document ID from URL params
         const order = await Order.findById(id).lean();
-        
+
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }
@@ -110,7 +110,7 @@ exports.getOrderDetails = async (req, res) => {
 
     try {
         const order = await Order.findOne({ 'orders._id': mongoose.Types.ObjectId(orderId) });
-        
+
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }

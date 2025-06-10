@@ -31,7 +31,6 @@ const uploadImages = upload.fields([
 const addProduct = async (req, res) => {
   try {
     const { name, description, category, subcategory, size, stock, price, sale } = req.body;
-
     // Extract file paths (use filenames only)
     const mainImage = req.files['mainImage'] ? req.files['mainImage'][0].filename : '';
     const otherImages = [
@@ -50,12 +49,17 @@ const addProduct = async (req, res) => {
       size: size.split(',').map(s => s.trim()), // Convert to array
       stock,
       price,
+      rating: 0,
+      review: 0,
       sale,
       image: mainImage,
       otherImages,
     });
 
+
     await newProduct.save();
+    //console.log("sdasas")
+
     res.status(201).json({ message: 'Product added successfully', product: newProduct });
   } catch (error) {
     res.status(500).json({ error: error.message });
