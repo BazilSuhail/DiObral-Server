@@ -120,6 +120,43 @@ router.get('/reviews/:productId', async (req, res) => {
 });
 
 
+// Route to update product images to webp format for first 20 documents
+router.get('/product-images', async (req, res) => {
+    try {
+        // Get all products from the collection
+        const products = await Product.find({}).limit(20).exec();
+        
+        if (!products || products.length === 0) {
+            return res.status(404).json({ message: 'No products found.' });
+        }
+
+        // Update each product's image attribute
+        const updatePromises = products.map((product, index) => {
+            const newImageName = `${index + 1}.webp`; // 1.webp, 2.webp, etc.
+            return Product.updateOne(
+                { _id: product._id },
+                { $set: { image: newImageName } }
+            );
+        });
+
+        // Wait for all updates to complete
+        await Promise.all(updatePromises);
+
+        res.status(200).json({ 
+            message: 'Successfully updated images for first 20 products',
+            updatedCount: products.length
+        });
+
+    } catch (error) {
+        console.error('Error updating product images:', error);
+        res.status(500).json({ 
+            message: 'Server error while updating product images',
+            error: error.message 
+        });
+    }
+});
+
+
 router.get('/reviews/average/:productId', async (req, res) => {
     try {
         const productId = req.params.productId;
