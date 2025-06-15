@@ -9,6 +9,7 @@ const ProfileSchema = new mongoose.Schema({
     orders: { type: [Object], default: [] },
     address: {
         city: { type: String, default: '' },
+        state: { type: String, default: '' },
         street: { type: String, default: '' },
         country: { type: String, default: '' }
     },
