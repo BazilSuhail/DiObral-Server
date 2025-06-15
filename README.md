@@ -13,9 +13,10 @@ Texleath is a full-featured e-commerce web application designed for the sale of 
 
 The backend of Texleath is developed using Node.js and Express.js, providing a robust and scalable API for handling product data, user authentication, order processing, and more. MongoDB serves as the primary database, efficiently managing product inventories, user information, and order history.
 
-With an elegant and responsive interface powered by React.js, Texleath is optimized for user engagement and conversion. It integrates essential e-commerce functionalities, including a dynamic product catalog, cart and checkout system, user account management, and customer reviews.
----
 
+With an elegant and responsive interface powered by React.js, Texleath is optimized for user engagement and conversion. It integrates essential e-commerce functionalities, including a dynamic product catalog, cart and checkout system, user account management, and customer reviews. 
+
+---
 
 ### 🤖 Tech Stack 
  <a href="#"> 
