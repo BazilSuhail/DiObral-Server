@@ -9,6 +9,7 @@ const orderItemSchema = new mongoose.Schema({
     size: { type: String, required: true }
 });
 
+
 const individualOrderSchema = new mongoose.Schema({
     items: [orderItemSchema],
     orderDate: { type: Date, default: Date.now },

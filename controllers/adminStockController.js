@@ -6,6 +6,46 @@ const Profile = require('../models/profile');
 const CompletedOrder = require('../models/completedOrder'); // Path to your completed order model
 
 // Complete an order
+// exports.completeOrder = async (req, res) => {
+//     const { userId, orderId } = req.params;
+
+//     try {
+//         // Find the order
+//         const order = await Order.findOne({ userId });
+//         if (!order) {
+//             return res.status(404).json({ message: 'Order not found' });
+//         }
+
+//         // Find the order to move
+//         const orderIndex = order.orders.findIndex(o => o._id.toString() === orderId);
+//         if (orderIndex === -1) {
+//             return res.status(404).json({ message: 'Order not found' });
+//         }
+//         // Move the order to completedOrders
+//         const [orderToComplete] = order.orders.splice(orderIndex, 1);
+//         let completeOrder = await CompletedOrder.findOne({ userId });
+
+//         if (!completeOrder) {
+//             // If no completed order document exists, create one
+//             completeOrder = new CompletedOrder({
+//                 userId,
+//                 completeOrder: [orderToComplete]
+//             });
+//         } else {
+//             // If exists, update it
+//             completeOrder.completedOrders.push(orderToComplete);
+//         }
+
+//         // Save both documents
+//         await completeOrder.save();
+//         console.log("Sdaaaaas")
+//         await order.save();
+
+//         res.status(200).json({ message: 'Order completed successfully' });
+//     } catch (error) {
+//         res.status(500).json({ message: error.message });
+//     }
+// };
 exports.completeOrder = async (req, res) => {
     const { userId, orderId } = req.params;
 
@@ -21,15 +61,19 @@ exports.completeOrder = async (req, res) => {
         if (orderIndex === -1) {
             return res.status(404).json({ message: 'Order not found' });
         }
+
         // Move the order to completedOrders
         const [orderToComplete] = order.orders.splice(orderIndex, 1);
+        //console.log(orderToComplete)
+        
+        // Use let instead of const since we might reassign it
         let completeOrder = await CompletedOrder.findOne({ userId });
 
         if (!completeOrder) {
             // If no completed order document exists, create one
             completeOrder = new CompletedOrder({
                 userId,
-                completeOrder: [orderToComplete]
+                completedOrders: [orderToComplete]  // Fixed field name to match your schema
             });
         } else {
             // If exists, update it
@@ -38,14 +82,15 @@ exports.completeOrder = async (req, res) => {
 
         // Save both documents
         await completeOrder.save();
-
         await order.save();
 
         res.status(200).json({ message: 'Order completed successfully' });
     } catch (error) {
+        console.error('Error completing order:', error);
         res.status(500).json({ message: error.message });
     }
 };
+
 /*
 
 module.exports = {
