@@ -1,5 +1,5 @@
-### Textleath (E-commerce Web Application)
-Texleath, an e-commerce platform developed for high-quality clothing sales. This platform's web application offers a sleek and elegant design, reflecting the premium nature of our products. With a focus on user experience, our site provides a seamless and engaging shopping experience, complemented by advanced features and interactive elements.
+### DiObral (E-commerce Web Application)
+DiObral, an e-commerce platform developed for high-quality clothing sales. This platform's web application offers a sleek and elegant design, reflecting the premium nature of our products. With a focus on user experience, our site provides a seamless and engaging shopping experience, complemented by advanced features and interactive elements.
 
 
 [![Open Source Love svg1](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)](#)
@@ -9,12 +9,12 @@ Texleath, an e-commerce platform developed for high-quality clothing sales. This
 
 ## Project Description:
 
-Texleath is a full-featured e-commerce web application designed for the sale of premium clothing and wearable products. Built using the MERN stack (MongoDB, Express.js, React.js, Node.js), the platform offers a seamless, scalable, and visually refined shopping experience for both retail customers and business stakeholders.
+DiObral is a full-featured e-commerce web application designed for the sale of premium clothing and wearable products. Built using the MERN stack (MongoDB, Express.js, React.js, Node.js), the platform offers a seamless, scalable, and visually refined shopping experience for both retail customers and business stakeholders.
 
-The backend of Texleath is developed using Node.js and Express.js, providing a robust and scalable API for handling product data, user authentication, order processing, and more. MongoDB serves as the primary database, efficiently managing product inventories, user information, and order history.
+The backend of DiObral is developed using Node.js and Express.js, providing a robust and scalable API for handling product data, user authentication, order processing, and more. MongoDB serves as the primary database, efficiently managing product inventories, user information, and order history.
 
 
-With an elegant and responsive interface powered by React.js, Texleath is optimized for user engagement and conversion. It integrates essential e-commerce functionalities, including a dynamic product catalog, cart and checkout system, user account management, and customer reviews. 
+With an elegant and responsive interface powered by React.js, DiObral is optimized for user engagement and conversion. It integrates essential e-commerce functionalities, including a dynamic product catalog, cart and checkout system, user account management, and customer reviews. 
 
 ---
 
@@ -30,8 +30,8 @@ With an elegant and responsive interface powered by React.js, Texleath is optimi
 
 
  ---
-- Check out the latest demo of Project [Texleath](https://texleath.netlify.app/). 
-- Find the Server's Repository of this Project Here [Texleath-Backend-Server](https://github.com/BazilSuhail/Texleath-Online-Marketplace). 
+- Check out the latest demo of Project [DiObral](https://DiObral.netlify.app/). 
+- Find the Server's Repository of this Project Here [DiObral-Backend-Server](https://github.com/BazilSuhail/DiObral-Online-Marketplace). 
 
 ---
 
@@ -39,11 +39,11 @@ With an elegant and responsive interface powered by React.js, Texleath is optimi
 ### Run Locally
 Clone the project using the following command:
 ```bash
-   git clone https://github.com/BazilSuhail/Texleath-Backend.git
+   git clone https://github.com/BazilSuhail/DiObral-Backend.git
 ```
 Go to the project directory
 ```bash
-   cd Texleath-Backend
+   cd DiObral-Backend
 ```
 Then **Run** this command in your terminal to install all required dependancies:
 ```bash
