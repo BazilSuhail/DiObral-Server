@@ -9,14 +9,27 @@ const app = express();
 connectDB();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Auth
 app.use('/auth', require('./routes/authRoutes'));
+
+// Public browsing
+app.use('/api', require('./routes/publicRoutes'));
+
+// Retailer
 app.use('/retailer/store', require('./routes/storeRoutes'));
 app.use('/retailer/products', require('./routes/productRoutes'));
-app.use('/categories', require('./routes/categoryRoutes'));
 app.use('/retailer/orders', require('./routes/orderRoutes'));
+
+// Categories (public)
+app.use('/categories', require('./routes/categoryRoutes'));
+
+// Customer
+app.use('/cart', require('./routes/cartRoutes'));
+app.use('/checkout', require('./routes/checkoutRoutes'));
+app.use('/orders', require('./routes/customerOrderRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
