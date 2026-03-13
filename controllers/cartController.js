@@ -1,4 +1,4 @@
-const CartState = require('../models/cart');
+const CartState = require('../models/CartState');
 
 // Save cart state for a user
 exports.saveCart = async (req, res) => {

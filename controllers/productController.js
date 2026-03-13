@@ -1,6 +1,6 @@
 const multer = require('multer');
 const path = require('path');
-const Product = require('../models/product');
+const Product = require('../models/Product');
 
 const fs = require('fs');
 

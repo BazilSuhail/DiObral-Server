@@ -1,16 +1,19 @@
-// controllers/subcategoryController.js
-const Subcategory = require('../models/subcategory');
-const Category = require('../models/category'); // Assuming you have a Category model
+const Category = require('../models/Category');
 
-// Create a subcategory
 const createSubcategory = async (req, res) => {
   try {
     const { name, description, category } = req.body;
 
-    const newSubcategory = new Subcategory({
+    const parent = await Category.findOne({ slug: category });
+    if (!parent) {
+      return res.status(404).json({ message: 'Parent category not found' });
+    }
+
+    const newSubcategory = new Category({
       name,
+      slug: name.toLowerCase().replace(/\s+/g, '-'),
       description,
-      category,
+      parent: parent._id,
     });
 
     await newSubcategory.save();
@@ -20,30 +23,31 @@ const createSubcategory = async (req, res) => {
   }
 };
 
-// Update a subcategory
 const updateSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, category } = req.body;
+    const { name, description } = req.body;
 
-    const updatedSubcategory = await Subcategory.findByIdAndUpdate(id, { name, description, category }, { new: true });
+    const updated = await Category.findByIdAndUpdate(
+      id,
+      { name, description, slug: name?.toLowerCase().replace(/\s+/g, '-') },
+      { new: true }
+    );
 
-    if (!updatedSubcategory) return res.status(404).json({ message: 'Subcategory not found' });
+    if (!updated) return res.status(404).json({ message: 'Subcategory not found' });
 
-    res.status(200).json({ message: 'Subcategory updated successfully', subcategory: updatedSubcategory });
+    res.status(200).json({ message: 'Subcategory updated successfully', subcategory: updated });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Delete a subcategory
 const deleteSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
+    const deleted = await Category.findByIdAndDelete(id);
 
-    const deletedSubcategory = await Subcategory.findByIdAndDelete(id);
-
-    if (!deletedSubcategory) return res.status(404).json({ message: 'Subcategory not found' });
+    if (!deleted) return res.status(404).json({ message: 'Subcategory not found' });
 
     res.status(200).json({ message: 'Subcategory deleted successfully' });
   } catch (error) {
@@ -51,10 +55,9 @@ const deleteSubcategory = async (req, res) => {
   }
 };
 
-// Get all subcategories
 const getAllSubcategories = async (req, res) => {
   try {
-    const subcategories = await Subcategory.find();
+    const subcategories = await Category.find({ parent: { $ne: null } }).populate('parent');
     res.status(200).json(subcategories);
   } catch (error) {
     res.status(500).json({ error: error.message });

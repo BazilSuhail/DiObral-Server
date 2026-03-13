@@ -1,6 +1,6 @@
 // controllers/categoryController.js
 
-const Category = require('../models/category');
+const Category = require('../models/Category');
 
 // Add a new category
 const addCategory = async (req, res) => {

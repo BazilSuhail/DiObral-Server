@@ -12,29 +12,18 @@ const ProductSchema = new mongoose.Schema({
     trim: true,
   },
   category: {
-    type: String,
-    required: true,
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
   },
-  subcategory: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  rating: {
-    type: Number,
-    required: true,
-    default: 0,
-  },
-  size: [String], // Array of sizes
-  stock: {
-    type: Number,
+  store: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Store',
     required: true,
   },
-  reviews: {
-    type: Number,
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Profile',
     required: true,
-    default: 0, 
   },
   price: {
     type: Number,
@@ -42,21 +31,41 @@ const ProductSchema = new mongoose.Schema({
   },
   sale: {
     type: Number,
-    default: 0, // Percentage off
+    default: 0,
+  },
+  stock: {
+    type: Number,
+    required: true,
+  },
+  size: [String],
+  rating: {
+    type: Number,
+    default: 0,
+  },
+  reviewCount: {
+    type: Number,
+    default: 0,
   },
   image: {
     type: String,
     required: true,
   },
-  otherImages: [
-    {
-      type: String, 
-    },
-  ],
-}, {
-  timestamps: true, // Adds createdAt and updatedAt fields
-});
+  otherImages: [String],
+  tags: [String],
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  favCount: {
+    type: Number,
+    default: 0,
+  },
+}, { timestamps: true });
 
-const Product = mongoose.model('Product', ProductSchema);
+ProductSchema.index({ store: 1, isActive: 1 });
+ProductSchema.index({ category: 1 });
+ProductSchema.index({ price: 1 });
+ProductSchema.index({ tags: 1 });
+ProductSchema.index({ name: 'text', description: 'text' });
 
-module.exports = Product;
+module.exports = mongoose.model('Product', ProductSchema);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/product'); // Adjust path as needed
+const Product = require('../models/Product');
 
 // Route to fetch the first 8 products
 router.get('/', async (req, res) => {

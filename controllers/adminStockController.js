@@ -1,143 +1,58 @@
-// controllers/userController.js
+const Order = require('../models/Order');
+const Profile = require('../models/Profile');
 
-const Order = require('../models/order');
-const Profile = require('../models/profile');
-
-const CompletedOrder = require('../models/completedOrder'); // Path to your completed order model
-
-// Complete an order
-// exports.completeOrder = async (req, res) => {
-//     const { userId, orderId } = req.params;
-
-//     try {
-//         // Find the order
-//         const order = await Order.findOne({ userId });
-//         if (!order) {
-//             return res.status(404).json({ message: 'Order not found' });
-//         }
-
-//         // Find the order to move
-//         const orderIndex = order.orders.findIndex(o => o._id.toString() === orderId);
-//         if (orderIndex === -1) {
-//             return res.status(404).json({ message: 'Order not found' });
-//         }
-//         // Move the order to completedOrders
-//         const [orderToComplete] = order.orders.splice(orderIndex, 1);
-//         let completeOrder = await CompletedOrder.findOne({ userId });
-
-//         if (!completeOrder) {
-//             // If no completed order document exists, create one
-//             completeOrder = new CompletedOrder({
-//                 userId,
-//                 completeOrder: [orderToComplete]
-//             });
-//         } else {
-//             // If exists, update it
-//             completeOrder.completedOrders.push(orderToComplete);
-//         }
-
-//         // Save both documents
-//         await completeOrder.save();
-//         console.log("Sdaaaaas")
-//         await order.save();
-
-//         res.status(200).json({ message: 'Order completed successfully' });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// };
+// Complete an order (set status to delivered)
 exports.completeOrder = async (req, res) => {
-    const { userId, orderId } = req.params;
+    const { orderId } = req.params;
 
     try {
-        // Find the order
-        const order = await Order.findOne({ userId });
+        const order = await Order.findByIdAndUpdate(
+            orderId,
+            { status: 'delivered' },
+            { new: true }
+        );
+
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Find the order to move
-        const orderIndex = order.orders.findIndex(o => o._id.toString() === orderId);
-        if (orderIndex === -1) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
-
-        // Move the order to completedOrders
-        const [orderToComplete] = order.orders.splice(orderIndex, 1);
-        //console.log(orderToComplete)
-        
-        // Use let instead of const since we might reassign it
-        let completeOrder = await CompletedOrder.findOne({ userId });
-
-        if (!completeOrder) {
-            // If no completed order document exists, create one
-            completeOrder = new CompletedOrder({
-                userId,
-                completedOrders: [orderToComplete]  // Fixed field name to match your schema
-            });
-        } else {
-            // If exists, update it
-            completeOrder.completedOrders.push(orderToComplete);
-        }
-
-        // Save both documents
-        await completeOrder.save();
-        await order.save();
-
-        res.status(200).json({ message: 'Order completed successfully' });
+        res.status(200).json({ message: 'Order completed successfully', order });
     } catch (error) {
         console.error('Error completing order:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
-/*
-
-module.exports = {
-    completeOrder
-};
-
-*/
-
 // Get all users with their orders
 exports.getUsersWithOrders = async (req, res) => {
     try {
-        const orders = await Order.find({}, '_id userId orders').lean();
-        const userIds = [...new Set(orders.map(order => order.userId))];
+        const orders = await Order.find().populate('customer', 'fullName email contact').lean();
 
-        if (userIds.length === 0) {
-            return res.json([]);
-        }
-
-        const profiles = await Profile.find({ _id: { $in: userIds } }).select('_id fullName email contact').lean();
         const userMap = {};
-        profiles.forEach(profile => {
-            userMap[profile._id.toString()] = profile;
+        orders.forEach(order => {
+            const id = order.customer?._id?.toString() || order.customer;
+            if (!userMap[id]) {
+                userMap[id] = {
+                    userId: id,
+                    fullName: order.customer?.fullName || 'Unknown',
+                    email: order.customer?.email || 'N/A',
+                    contact: order.customer?.contact || 'N/A',
+                    orderCount: 0,
+                };
+            }
+            userMap[id].orderCount++;
         });
 
-        const usersWithOrders = orders.map(order => {
-            const profile = userMap[order.userId];
-            return {
-                documentId: order._id.toString(),
-                userId: order.userId,
-                fullName: profile ? profile.fullName : 'Unknown',
-                email: profile ? profile.email : 'N/A',
-                contact: profile ? profile.contact : 'N/A',
-                orderCount: order.orders.length
-            };
-        });
-
-        res.json(usersWithOrders);
+        res.json(Object.values(userMap));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-
-// Get orders by document ID
+// Get order by ID
 exports.getOrderById = async (req, res) => {
     try {
-        const { id } = req.params; // Get document ID from URL params
+        const { id } = req.params;
         const order = await Order.findById(id).lean();
 
         if (!order) {
@@ -150,24 +65,18 @@ exports.getOrderById = async (req, res) => {
     }
 };
 
+// Get order details (same as getById in new flat schema)
 exports.getOrderDetails = async (req, res) => {
     const { orderId } = req.params;
 
     try {
-        const order = await Order.findOne({ 'orders._id': mongoose.Types.ObjectId(orderId) });
+        const order = await Order.findById(orderId).lean();
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
 
-        // Find the specific order item within the document
-        const orderItem = order.orders.find(o => o._id.toString() === orderId);
-
-        if (!orderItem) {
-            return res.status(404).json({ message: 'Order item not found' });
-        }
-
-        res.json(orderItem);
+        res.json(order);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

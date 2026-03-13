@@ -8,7 +8,7 @@ router.get('/users-with-orders', userController.getUsersWithOrders);
 router.get('/orders/:id', userController.getOrderById);
 router.get('/order-detail/:orderId', userController.getOrderDetails);
 
-router.post('/:userId/:orderId', userController.completeOrder);
+router.post('/:orderId/complete', userController.completeOrder);
 
 
 module.exports = router;
