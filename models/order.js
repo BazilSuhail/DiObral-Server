@@ -45,6 +45,11 @@ const OrderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
   },
+  coupon: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Coupon',
+    default: null,
+  },
   trackingNumber: { type: String, default: '' },
   notes: { type: String, default: '' },
 }, { timestamps: true });
