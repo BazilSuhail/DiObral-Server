@@ -41,5 +41,11 @@ app.use('/wishlist', require('./routes/wishlistRoutes'));
 // Coupons (retailer management + public validation)
 app.use('/coupons', require('./routes/couponRoutes'));
 
+// Bundles
+app.use('/bundles', require('./routes/bundleRoutes'));
+
+// Retailer Dashboard
+app.use('/retailer/dashboard', require('./routes/dashboardRoutes'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
