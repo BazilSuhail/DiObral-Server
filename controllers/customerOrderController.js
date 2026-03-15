@@ -26,9 +26,12 @@ exports.getOrders = async (req, res) => {
       }
       groups[key].orders.push(order);
       groups[key].total += order.total;
-      // Use most advanced status for the group
-      const statusOrder = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-      if (statusOrder.indexOf(order.status) > statusOrder.indexOf(groups[key].status)) {
+      // Use most advanced non-cancelled status for the group
+      if (order.status === 'cancelled') continue;
+      const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
+      const currentIdx = statusOrder.indexOf(groups[key].status);
+      const orderIdx = statusOrder.indexOf(order.status);
+      if (orderIdx > currentIdx) {
         groups[key].status = order.status;
       }
     }
@@ -72,7 +75,7 @@ exports.trackOrder = async (req, res) => {
   try {
     const order = await Order.findOne(
       { _id: req.params.id, customer: req.user.id },
-      'status trackingNumber createdAt updatedAt items.groupOrderId'
+      'status trackingNumber createdAt updatedAt items'
     ).lean();
 
     if (!order) {

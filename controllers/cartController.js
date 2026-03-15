@@ -37,6 +37,10 @@ exports.addToCart = async (req, res) => {
       return res.status(400).json({ error: `Only ${product.stock} in stock` });
     }
 
+    if (product.size.length && size && !product.size.includes(size)) {
+      return res.status(400).json({ error: `Invalid size. Available: ${product.size.join(', ')}` });
+    }
+
     const salePrice = product.sale > 0
       ? product.price - (product.price * product.sale) / 100
       : product.price;

@@ -95,12 +95,20 @@ exports.getProduct = async (req, res) => {
 
 exports.listStores = async (req, res) => {
   try {
-    const stores = await Store.find()
-      .sort({ followerCount: -1 })
-      .populate('ownedBy', 'fullName')
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
 
-    // Attach product count for each store
+    const [stores, total] = await Promise.all([
+      Store.find()
+        .sort({ followerCount: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('ownedBy', 'fullName')
+        .lean(),
+      Store.countDocuments(),
+    ]);
+
     const withCounts = await Promise.all(
       stores.map(async (store) => {
         const productCount = await Product.countDocuments({ store: store._id, isActive: true });
@@ -108,7 +116,15 @@ exports.listStores = async (req, res) => {
       })
     );
 
-    res.status(200).json(withCounts);
+    res.status(200).json({
+      stores: withCounts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { validationResult } = require('express-validator');
 const Profile = require('../models/Profile');
 const Store = require('../models/Store');
 
@@ -20,15 +21,12 @@ const generateSlug = (name) => {
 
 exports.register = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { email, password, fullName, role, bio, contact, address } = req.body;
-
-    if (!email || !password || !fullName) {
-      return res.status(400).json({ error: 'Email, password, and full name are required' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
 
     const existing = await Profile.findOne({ email: email.toLowerCase() });
     if (existing) {
@@ -36,13 +34,7 @@ exports.register = async (req, res) => {
     }
 
     const userRole = role || 'customer';
-    const validRoles = ['customer', 'retailer'];
     const roles = Array.isArray(userRole) ? userRole : [userRole];
-    for (const r of roles) {
-      if (!validRoles.includes(r)) {
-        return res.status(400).json({ error: `Invalid role: ${r}` });
-      }
-    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -99,11 +91,12 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
+
+    const { email, password } = req.body;
 
     const profile = await Profile.findOne({ email: email.toLowerCase() });
     if (!profile) {

@@ -64,14 +64,25 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
-    const order = await Order.findOneAndUpdate(
-      { _id: req.params.id, store: profile.store },
-      { $set: { status, ...(trackingNumber && { trackingNumber }) } },
-      { new: true }
-    );
-
+    const order = await Order.findOne({ _id: req.params.id, store: profile.store });
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const prevStatus = order.status;
+
+    order.status = status;
+    if (trackingNumber) order.trackingNumber = trackingNumber;
+    await order.save();
+
+    // Restore stock when order is cancelled
+    if (status === 'cancelled' && prevStatus !== 'cancelled') {
+      const Product = require('../models/Product');
+      for (const item of order.items) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity },
+        });
+      }
     }
 
     res.status(200).json({ message: `Order ${status}`, order });

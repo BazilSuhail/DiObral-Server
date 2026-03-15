@@ -75,7 +75,7 @@ exports.createBundle = async (req, res) => {
       return sum + (product.price * (item.quantity || 1));
     }, 0);
 
-    if (price > originalTotal) {
+    if (price >= originalTotal) {
       return res.status(400).json({ error: 'Bundle price must be less than the sum of individual prices' });
     }
 
