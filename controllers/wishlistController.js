@@ -22,6 +22,7 @@ exports.toggleWishlist = async (req, res) => {
         $inc: { favProductCount: -1 },
       });
       await Product.findByIdAndUpdate(productId, { $inc: { favCount: -1 } });
+      console.log('toggleWishlist response:', { wishlisted: false });
       return res.status(200).json({ wishlisted: false });
     }
 
@@ -31,6 +32,7 @@ exports.toggleWishlist = async (req, res) => {
     });
     await Product.findByIdAndUpdate(productId, { $inc: { favCount: 1 } });
 
+    console.log('toggleWishlist response:', { wishlisted: true });
     res.status(200).json({ wishlisted: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -47,7 +49,9 @@ exports.getWishlist = async (req, res) => {
       })
       .lean();
 
-    res.status(200).json(profile.favProducts);
+    const valid = (profile.favProducts || []).filter(Boolean);
+    console.log('getWishlist response:', JSON.stringify(valid, null, 2));
+    res.status(200).json(valid);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -56,17 +60,14 @@ exports.getWishlist = async (req, res) => {
 exports.checkWishlist = async (req, res) => {
   try {
     const profile = await Profile.findById(req.user.id).select('favProducts').lean();
-    const wishlisted = profile.favProducts.map((id) => id.toString());
+    const wishlisted = (profile.favProducts || []).map((id) => id.toString());
 
-    // Accept ?ids=id1,id2,id3 or a single :productId param
-    const ids = req.params.productId
-      ? [req.params.productId]
-      : (req.query.ids ? req.query.ids.split(',') : []);
-
+    const ids = req.query.ids ? req.query.ids.split(',') : [];
     const result = {};
     ids.forEach((id) => { result[id] = wishlisted.includes(id); });
 
-    res.status(200).json(req.params.productId ? { wishlisted: result[ids[0]] } : result);
+    console.log('checkWishlist response:', JSON.stringify(result, null, 2));
+    res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -92,6 +93,7 @@ exports.toggleFollow = async (req, res) => {
         $inc: { favStoreCount: -1 },
       });
       await Store.findByIdAndUpdate(storeId, { $inc: { followerCount: -1 } });
+      console.log('toggleFollow response:', { following: false });
       return res.status(200).json({ following: false });
     }
 
@@ -101,6 +103,7 @@ exports.toggleFollow = async (req, res) => {
     });
     await Store.findByIdAndUpdate(storeId, { $inc: { followerCount: 1 } });
 
+    console.log('toggleFollow response:', { following: true });
     res.status(200).json({ following: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -116,7 +119,9 @@ exports.getFollowedStores = async (req, res) => {
       })
       .lean();
 
-    res.status(200).json(profile.favStores);
+    const valid = (profile.favStores || []).filter(Boolean);
+    console.log('getFollowedStores response:', JSON.stringify(valid, null, 2));
+    res.status(200).json(valid);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

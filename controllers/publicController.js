@@ -6,6 +6,7 @@ exports.listProducts = async (req, res) => {
   try {
     const {
       category,
+      subcategory,
       store,
       search,
       minPrice,
@@ -18,6 +19,7 @@ exports.listProducts = async (req, res) => {
     const filter = { isActive: true };
 
     if (category) filter.category = category;
+    if (subcategory) filter.subcategory = subcategory;
     if (store) filter.store = store;
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -48,6 +50,7 @@ exports.listProducts = async (req, res) => {
         .limit(Number(limit))
         .populate('store', 'storeName slug logo')
         .populate('category', 'name slug')
+        .populate('subcategory', 'name slug')
         .lean(),
       Product.countDocuments(filter),
     ]);
@@ -70,7 +73,8 @@ exports.getProduct = async (req, res) => {
   try {
     const product = await Product.findOne({ _id: req.params.id, isActive: true })
       .populate('store', 'storeName slug logo rating')
-      .populate('category', 'name slug');
+      .populate('category', 'name slug')
+      .populate('subcategory', 'name slug');
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
@@ -142,10 +146,13 @@ exports.getStorefront = async (req, res) => {
     const products = await Product.find({ store: store._id, isActive: true })
       .sort({ createdAt: -1 })
       .populate('category', 'name slug')
+      .populate('subcategory', 'name slug')
       .lean();
 
+    const categoryIds = [...new Set(products.map((p) => p.category).filter(Boolean))];
+    const subcategoryIds = [...new Set(products.map((p) => p.subcategory).filter(Boolean))];
     const categories = await Category.find({
-      _id: { $in: [...new Set(products.map((p) => p.category).filter(Boolean))] },
+      _id: { $in: [...categoryIds, ...subcategoryIds] },
     }).lean();
 
     const stats = {

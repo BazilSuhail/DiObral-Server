@@ -90,7 +90,7 @@ exports.updateCartItem = async (req, res) => {
     const { quantity } = req.body;
     const { itemId } = req.params;
 
-    if (!quantity || quantity < 1) {
+    if (quantity === undefined || quantity === null || quantity < 1) {
       return res.status(400).json({ error: 'Quantity must be at least 1' });
     }
 

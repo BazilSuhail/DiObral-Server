@@ -56,6 +56,9 @@ exports.submitReview = async (req, res) => {
 
     res.status(201).json({ message: 'Review submitted', review: populated });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'You have already reviewed this product' });
+    }
     res.status(500).json({ error: error.message });
   }
 };

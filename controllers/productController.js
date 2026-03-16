@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Product = require('../models/Product');
 const Profile = require('../models/Profile');
+const Category = require('../models/Category');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -41,7 +42,23 @@ const deleteFile = (filename) => {
   if (fs.existsSync(fp)) fs.unlinkSync(fp);
 };
 
-exports.uploadMiddleware = uploadFields;
+exports.uploadMiddleware = (req, res, next) => {
+  uploadFields(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File too large. Maximum size is 5MB per image.' });
+      }
+      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: `Unexpected field: ${err.field}` });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+};
 
 exports.getProducts = async (req, res) => {
   try {
@@ -53,6 +70,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find({ store: profile.store })
       .sort({ createdAt: -1 })
       .populate('category', 'name slug')
+      .populate('subcategory', 'name slug')
       .lean();
 
     res.status(200).json(products);
@@ -69,7 +87,8 @@ exports.getProduct = async (req, res) => {
     }
 
     const product = await Product.findOne({ _id: req.params.id, store: profile.store })
-      .populate('category', 'name slug');
+      .populate('category', 'name slug')
+      .populate('subcategory', 'name slug');
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
@@ -88,25 +107,44 @@ exports.createProduct = async (req, res) => {
       return res.status(403).json({ error: 'No store found. Register as a retailer first.' });
     }
 
-    const { name, description, category, price, stock, sale, size, tags } = req.body;
+    const { name, description, category, subcategory, price, stock, sale, size, tags } = req.body;
 
     if (!name || !description || !price || stock === undefined) {
       return res.status(400).json({ error: 'Name, description, price, and stock are required' });
     }
 
+    if (!category || !subcategory) {
+      return res.status(400).json({ error: 'Category and subcategory are required' });
+    }
+
+    const subCat = await Category.findById(subcategory);
+    if (!subCat || !subCat.parent || subCat.parent.toString() !== category) {
+      return res.status(400).json({ error: 'Subcategory must belong to the selected category' });
+    }
+
     if (!req.files || !req.files['mainImage']) {
-      return res.status(400).json({ error: 'Main image is required' });
+      return res.status(400).json({ error: 'Cover image (mainImage) is required' });
+    }
+
+    const extraKeys = ['image1', 'image2', 'image3', 'image4', 'image5'];
+    const extraCount = extraKeys.filter((k) => req.files[k]).length;
+    if (extraCount < 1) {
+      return res.status(400).json({ error: 'At least 1 additional image (image1–image5) is required' });
+    }
+    if (extraCount > 5) {
+      return res.status(400).json({ error: 'Maximum 5 additional images allowed' });
     }
 
     const mainImage = req.files['mainImage'][0].filename;
-    const otherImages = ['image1', 'image2', 'image3', 'image4', 'image5']
+    const otherImages = extraKeys
       .map((key) => (req.files[key] ? req.files[key][0].filename : ''))
       .filter(Boolean);
 
     const product = new Product({
       name,
       description,
-      category: category || null,
+      category,
+      subcategory,
       store: profile.store,
       createdBy: req.user.id,
       price: Number(price),
@@ -138,11 +176,19 @@ exports.updateProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const { name, description, category, price, stock, sale, size, tags, isActive } = req.body;
+    const { name, description, category, subcategory, price, stock, sale, size, tags, isActive } = req.body;
 
     if (name !== undefined) product.name = name;
     if (description !== undefined) product.description = description;
     if (category !== undefined) product.category = category;
+    if (subcategory !== undefined) {
+      const subCat = await Category.findById(subcategory);
+      const targetCategory = category || product.category;
+      if (!subCat || !subCat.parent || subCat.parent.toString() !== targetCategory.toString()) {
+        return res.status(400).json({ error: 'Subcategory must belong to the selected category' });
+      }
+      product.subcategory = subcategory;
+    }
     if (price !== undefined) product.price = Number(price);
     if (stock !== undefined) product.stock = Number(stock);
     if (sale !== undefined) product.sale = Number(sale);

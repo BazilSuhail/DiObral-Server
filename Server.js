@@ -12,6 +12,9 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Health check
+app.get('/', (req, res) => res.json({ status: 'ok', message: 'Server is awake' }));
+
 // Auth
 app.use('/auth', require('./routes/authRoutes'));
 
@@ -23,8 +26,9 @@ app.use('/retailer/store', require('./routes/storeRoutes'));
 app.use('/retailer/products', require('./routes/productRoutes'));
 app.use('/retailer/orders', require('./routes/orderRoutes'));
 
-// Categories (public)
+// Categories (public + retailer management)
 app.use('/categories', require('./routes/categoryRoutes'));
+app.use('/retailer/categories', require('./routes/retailerCategoryRoutes'));
 
 // Customer
 app.use('/cart', require('./routes/cartRoutes'));
@@ -48,4 +52,10 @@ app.use('/bundles', require('./routes/bundleRoutes'));
 app.use('/retailer/dashboard', require('./routes/dashboardRoutes'));
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log('='.repeat(40));
+  console.log('  DiObral Server');
+  console.log(`  Port: ${PORT}`);
+  console.log(`  Env: ${process.env.NODE_ENV || 'development'}`);
+  console.log('='.repeat(40));
+});

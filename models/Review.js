@@ -34,5 +34,6 @@ const ReviewSchema = new mongoose.Schema({
 ReviewSchema.index({ product: 1, createdAt: -1 });
 ReviewSchema.index({ customer: 1 });
 ReviewSchema.index({ product: 1, rating: -1 });
+ReviewSchema.index({ product: 1, customer: 1 }, { unique: true });
 
 module.exports = mongoose.model('Review', ReviewSchema);
