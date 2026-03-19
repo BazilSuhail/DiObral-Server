@@ -1,10 +1,20 @@
 const mongoose = require('mongoose');
 
 const CartItemSchema = new mongoose.Schema({
+  itemType: {
+    type: String,
+    enum: ['product', 'bundle'],
+    default: 'product',
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: true,
+    default: null,
+  },
+  bundle: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Bundle',
+    default: null,
   },
   quantity: {
     type: Number,
@@ -13,7 +23,7 @@ const CartItemSchema = new mongoose.Schema({
   },
   size: {
     type: String,
-    required: true,
+    default: '',
   },
   price: {
     type: Number,
@@ -22,6 +32,14 @@ const CartItemSchema = new mongoose.Schema({
   store: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Store',
+  },
+  bundleName: {
+    type: String,
+    default: null,
+  },
+  image: {
+    type: String,
+    default: '',
   },
   bundleGroupId: {
     type: String,

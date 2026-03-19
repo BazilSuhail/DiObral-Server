@@ -27,11 +27,14 @@ exports.listProducts = async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
     if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $regex: search, $options: 'i' } },
-      ];
+      const escaped = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (escaped) {
+        filter.$or = [
+          { name: { $regex: escaped, $options: 'i' } },
+          { description: { $regex: escaped, $options: 'i' } },
+          { tags: { $regex: escaped, $options: 'i' } },
+        ];
+      }
     }
 
     let sortOption = { createdAt: -1 };
@@ -41,13 +44,30 @@ exports.listProducts = async (req, res) => {
     else if (sort === 'newest') sortOption = { createdAt: -1 };
     else if (sort === 'popular') sortOption = { favCount: -1 };
 
-    const skip = (Number(page) - 1) * Number(limit);
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    const projection = {
+      name: 1,
+      price: 1,
+      sale: 1,
+      image: 1,
+      rating: 1,
+      reviewCount: 1,
+      favCount: 1,
+      stock: 1,
+      store: 1,
+      category: 1,
+      subcategory: 1,
+      createdAt: 1,
+    };
 
     const [products, total] = await Promise.all([
-      Product.find(filter)
+      Product.find(filter, projection)
         .sort(sortOption)
         .skip(skip)
-        .limit(Number(limit))
+        .limit(limitNum)
         .populate('store', 'storeName slug logo')
         .populate('category', 'name slug')
         .populate('subcategory', 'name slug')
@@ -58,10 +78,10 @@ exports.listProducts = async (req, res) => {
     res.status(200).json({
       products,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {

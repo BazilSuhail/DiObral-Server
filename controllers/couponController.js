@@ -173,24 +173,53 @@ exports.validateCoupon = async (req, res) => {
     }
 
     let discountAmount = 0;
+    let originalDiscount = 0;
+    let cappedAt = null;
+    let message = 'Coupon is valid and will be applied';
+
     if (coupon.type === 'percentage') {
-      discountAmount = (orderAmount || 0) * (coupon.value / 100);
-      if (coupon.maxDiscount) {
-        discountAmount = Math.min(discountAmount, coupon.maxDiscount);
+      originalDiscount = (orderAmount || 0) * (coupon.value / 100);
+      discountAmount = originalDiscount;
+      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+        discountAmount = coupon.maxDiscount;
+        cappedAt = coupon.maxDiscount;
+        message = `Coupon valid — discount capped at $${coupon.maxDiscount.toFixed(2)}`;
       }
     } else {
+      originalDiscount = coupon.value;
       discountAmount = coupon.value;
+      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+        discountAmount = coupon.maxDiscount;
+        cappedAt = coupon.maxDiscount;
+        message = `Coupon valid — discount capped at $${coupon.maxDiscount.toFixed(2)}`;
+      }
     }
+
+    discountAmount = Math.round(discountAmount * 100) / 100;
 
     res.status(200).json({
       valid: true,
+      message,
       coupon: {
         id: coupon._id,
         code: coupon.code,
         type: coupon.type,
         value: coupon.value,
-        discountAmount: Math.round(discountAmount * 100) / 100,
+        discountAmount,
         maxDiscount: coupon.maxDiscount,
+        minOrderAmount: coupon.minOrderAmount,
+      },
+      details: {
+        orderAmount: orderAmount || 0,
+        originalDiscount: Math.round(originalDiscount * 100) / 100,
+        discountCapped: cappedAt !== null,
+        cappedAt,
+        discountBeforeCap: discountAmount,
+        usageUsed: coupon.usedCount,
+        usageLimit: coupon.usageLimit,
+        usageRemaining: coupon.usageLimit ? coupon.usageLimit - coupon.usedCount : null,
+        expiresAt: coupon.expiresAt,
+        minOrderSatisfied: orderAmount === undefined || orderAmount >= coupon.minOrderAmount,
       },
     });
   } catch (error) {

@@ -8,6 +8,7 @@ const {
   deleteBundle,
   getStoreBundles,
   getBundleDetail,
+  uploadBundleImage,
 } = require('../controllers/bundleController');
 const auth = require('../middleware/authMiddleware');
 
@@ -19,8 +20,8 @@ router.get('/public/:id', getBundleDetail);
 // Retailer (auth required)
 router.get('/', auth, getBundles);
 router.get('/:id', auth, getBundle);
-router.post('/', auth, createBundle);
-router.put('/:id', auth, updateBundle);
+router.post('/', auth, uploadBundleImage, createBundle);
+router.put('/:id', auth, uploadBundleImage, updateBundle);
 router.delete('/:id', auth, deleteBundle);
 
 module.exports = router;

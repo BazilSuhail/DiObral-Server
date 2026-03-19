@@ -48,4 +48,12 @@ const validateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { authLimiter, registerLimiter, publicLimiter, searchLimiter, heavyLimiter, validateLimiter };
+const paymentLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Too many payment requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { authLimiter, registerLimiter, publicLimiter, searchLimiter, heavyLimiter, validateLimiter, paymentLimiter };

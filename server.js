@@ -9,6 +9,14 @@ const app = express();
 connectDB();
 
 app.use(cors());
+
+// Stripe webhook must receive the raw body for signature verification
+app.post(
+  '/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
+  require('./controllers/paymentController').stripeWebhook
+);
+
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -34,6 +42,7 @@ app.use('/retailer/categories', require('./routes/retailerCategoryRoutes'));
 app.use('/cart', require('./routes/cartRoutes'));
 app.use('/checkout', require('./routes/checkoutRoutes'));
 app.use('/orders', require('./routes/customerOrderRoutes'));
+app.use('/payment', require('./routes/paymentRoutes'));
 
 // Reviews
 app.use('/reviews', require('./routes/reviewRoutes'));
