@@ -54,6 +54,9 @@ app.use('/wishlist', require('./routes/wishlistRoutes'));
 // Coupons (retailer management + public validation)
 app.use('/coupons', require('./routes/couponRoutes'));
 
+// AI shopping assistant (stateless NLP)
+app.use('/assistant', require('./routes/assistantRoutes'));
+
 // Bundles
 app.use('/bundles', require('./routes/bundleRoutes'));
 

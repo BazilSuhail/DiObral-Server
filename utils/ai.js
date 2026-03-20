@@ -4,11 +4,11 @@ dotenv.config();
 
 const GROQ_CONFIG = {
   url: "https://api.groq.com/openai/v1/chat/completions",
-  model: "llama-3.3-70b-versatile", // Using Groq's best model
-  // Other Groq models you could use:
-  // 'llama-3.1-8b-instant'
-  // 'mixtral-8x7b-32768'
-  // 'gemma2-9b-it'
+  model: "openai/gpt-oss-20b", // verified available on this key
+  // Other models on this key:
+  // 'openai/gpt-oss-120b'
+  // 'qwen/qwen3.8-27b'
+  // 'allam-2-7b'
 };
 
 const defaultOptions = {
