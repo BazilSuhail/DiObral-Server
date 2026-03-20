@@ -1,23 +1,16 @@
-// assistantController.js - Stateless NLP -> API router.
-// Groq never touches data: it only picks API "steps" from the knowledge block
-// below. The server validates each step and executes it against Mongo / our
-// existing route logic, then returns actions + results. Nothing is persisted.
+// assistantController.js - Agentic shopping assistant using Groq native function calling.
+// Multi-turn tool loop: LLM calls tools, server executes them, LLM sees results,
+// then calls more tools or replies. Up to MAX_STEPS iterations.
 
-const { groqStructured, GroqError } = require('../utils/groqAdapter');
+const { runAssistantWithRetry, GroqError } = require('../utils/groqAdapter');
+const { TOOLS } = require('../utils/assistantTools');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Store = require('../models/Store');
 
-const GROUNDING_TTL = 5 * 60 * 1000; // 5 min catalogue cache (not user data)
+const GROUNDING_TTL = 5 * 60 * 1000;
 const MAX_RESULTS = 8;
 const MAX_STEPS = 3;
-
-const TOOLS = [
-  'search_products', 'open_product', 'browse_category', 'add_to_cart',
-  'open_cart', 'go_checkout', 'place_order', 'track_orders',
-  'show_wishlist', 'show_stores', 'show_bundles', 'show_deals',
-  'show_home', 'show_profile', 'answer',
-];
 
 const URL_SORT = {
   price_asc: 'price-low',
@@ -49,7 +42,7 @@ async function buildGrounding() {
     Store.find().select('storeName slug').sort({ followerCount: -1 }).limit(20).lean(),
     Product.find({ isActive: true })
       .sort({ favCount: -1 })
-        .limit(18)
+      .limit(18)
       .select('name price sale size store')
       .populate('store', 'slug')
       .lean(),
@@ -82,47 +75,19 @@ function buildSystemPrompt(g, context) {
     .map((p) => `${p._id} | ${p.name} | ${p.price} | sizes: ${(p.size || []).join('/') || '-'}`)
     .join('\n');
 
-  return `You are the DiObral store API router. The customer writes natural language; you decide which API steps to call and in what order. You never search yourself, you only emit tool calls.
-
-Respond ONLY with valid json (the word json - no markdown, no code fences):
-{
-  "reply": "<max 2 plain sentences shown to the customer, no json inside>",
-  "steps": [ {"tool":"<tool name>","params":{...}}, {"tool":"...","params":{...}} ]
-}
-
-API STEPS you may call (params exactly as listed):
-1. search_products  {"query":"free text words","category":"slug optional","minPrice":number optional,"maxPrice":number optional,"sort":"price_asc|price_desc|rating|newest|popular" optional}
-   -> server runs the real product search and returns matching products.
-2. open_product     {"productId":"<id from catalogue>"}   (only for a named/pointed-at product)
-3. browse_category  {"category":"<slug from categories>"} -> opens that category page
-4. add_to_cart      {"productId":"<id>","size":"<size>","quantity":number}
-5. open_cart        {}
-6. go_checkout      {}
-7. place_order      {}   (finalizes the order - the checkout page submits it)
-8. track_orders     {}
-9. show_wishlist    {}
-10. show_stores     {}
-11. show_bundles    {}
-12. show_deals      {}
-13. show_home       {}
-14. show_profile    {}
-15. answer          {}   (greetings, FAQ, anything with no store action)
+  return `You are the DiObral shopping assistant. You help customers search products, manage their cart, and navigate the store.
 
 RULES:
-- Always return json with a "steps" array. Use "answer" with empty steps for chat.
-- Price phrases: "under 300" -> {"maxPrice":300}; "above X" -> {"minPrice":X}; "1500 to 2000" -> {"minPrice":1500,"maxPrice":2000}. Numbers are plain store-currency numbers.
-- For ANY shopping request (find/browse/show me) always call search_products or browse_category - never reply with an empty steps array just because you doubt results exist. The server has the real data.
-- "add X to cart" -> add_to_cart. If the customer did not say a size, pass the first size listed for that product. Never ask for the size.
-- Vague references ("add this", "add it") with NO matching id in VISIBLE PRODUCTS -> call search_products (use any product words from the message, or empty params to show top products) and reply asking the customer to pick one. NEVER return empty steps for a shopping request - the server always has products to show.
-- "add it then finalize/checkout" -> steps in order: add_to_cart, place_order.
-- place_order / go_checkout / track_orders / show_profile: only if signedIn is yes AND (for place_order) cartCount > 0. Otherwise call "answer" and say plainly: cart is empty -> suggest showing products; not signed in -> say please sign in.
-- Only use productIds and category slugs from the CATALOGUE below. Never invent ids.
+- If you want to say something to the user without calling a tool, use the "answer" tool with no page parameter.
+- If the user asks for something you cannot do (e.g., delete account, change password, update personal information, cancel orders, process refunds, remove products, delete reviews), use the "answer" tool and say exactly: "I can't do that. Would you like help with something else?"
+- If the user refers to "it", "this", or "that" and you are unsure which product they mean, use "answer" and ask them to pick a product from the list.
+- Only use product IDs and category slugs from the CATALOGUE below. Never invent IDs.
 - "this"/"it"/"the first one" -> resolve from VISIBLE PRODUCTS below.
+- You can only help with: searching products, browsing categories, adding items to cart, checking out, viewing orders, wishlist, stores, bundles, and general store questions. For anything else, politely refuse using the exact refusal message above.
 
 STORE KNOWLEDGE:
-Currency: store currency, plain numbers. Price range: ${g.priceRange.min} - ${g.priceRange.max}
+Currency: plain numbers. Price range: ${g.priceRange.min} - ${g.priceRange.max}
 CATEGORIES (name / slug): ${g.categories.map((c) => `${c.name} / ${c.slug}`).join(', ') || 'none'}
-STORES (name / slug): ${g.stores.map((s) => `${s.name} / ${s.slug}`).join(', ') || 'none'}
 CATALOGUE (id | name | price | sale% | sizes | store):
 ${g.products.map((p) => `${p.id} | ${p.name} | ${p.price} | ${p.sale} | ${(p.sizes || []).join('/') || '-'} | ${p.store}`).join('\n') || 'none'}
 
@@ -130,14 +95,6 @@ VISIBLE PRODUCTS in the customer's assistant panel (id | name | price | sizes):
 ${visible || '(none)'}
 
 CUSTOMER CONTEXT: page=${context.path || '/'} | cartCount=${context.cartCount || 0} | signedIn=${context.isAuthenticated ? 'yes' : 'no'}`;
-}
-
-async function parseSteps(message, context, grounding) {
-  return groqStructured({
-    prompt: message,
-    systemPrompt: buildSystemPrompt(grounding, context),
-    timeoutMs: 9000,
-  });
 }
 
 /* ---------------------------------------------------------- helpers */
@@ -207,10 +164,8 @@ function cleanFilters(raw) {
   return filters;
 }
 
-/* ---------------------------------------------------------- data execution */
+/* ---------------------------------------------------------- search */
 
-// Customers say "pants", the catalogue says "Bottoms"/"Trousers".
-// Expand common apparel words so word mismatch never returns zero.
 const SYNONYMS = {
   pants: ['pant', 'trouser', 'bottom'],
   pant: ['pants', 'trouser', 'bottom'],
@@ -308,16 +263,38 @@ async function findProductByName(name) {
   return list[0] || null;
 }
 
-/* ---------------------------------------------------------- step execution */
+/* ---------------------------------------------------------- tool execution */
 
-async function runStep(step, context, grounding) {
-  const tool = step && typeof step.tool === 'string' ? step.tool : '';
-  const params = step && step.params && typeof step.params === 'object' ? step.params : {};
+const ANSWER_ROUTES = {
+  home: '/',
+  profile: '/profile',
+  cart: '/cart',
+  checkout: '/checkout',
+  deals: '/productlist/all?sort=price-low',
+};
 
-  switch (tool) {
+const MISS_REPLIES = {
+  category: 'I could not find that category.',
+  cart: 'Your cart is empty. Want me to show you some products first?',
+  product: 'I could not find that product. Try searching by name?',
+  tool: "I can't do that. Would you like help with something else?",
+};
+
+const PRODUCT_MISS_REPLY =
+  'Which one did you mean? Pick a product below, then say "add it to cart".';
+
+async function suggestProducts() {
+  try {
+    return await runSearch({ sort: 'popular' });
+  } catch {
+    return [];
+  }
+}
+
+async function executeTool(name, args, context, grounding) {
+  switch (name) {
     case 'search_products': {
-      const filters = cleanFilters(params);
-      // pageUrl needs a category ObjectId - resolve slugs before building it
+      const filters = cleanFilters(args);
       if (filters.category && !isValidId(filters.category)) {
         const found = grounding.categories.find(
           (c) => c.slug === filters.category.toLowerCase() || c.name.toLowerCase() === filters.category.toLowerCase()
@@ -326,8 +303,6 @@ async function runStep(step, context, grounding) {
       }
       if (!filters.category) delete filters.category;
 
-      // Progressive fallback: exact -> drop price -> drop words -> cheapest.
-      // A shopping request must never come back empty while stock exists.
       let products = await runSearch(filters);
       let note = null;
       let shown = { ...filters };
@@ -349,16 +324,12 @@ async function runStep(step, context, grounding) {
         if (products.length) { note = 'any'; shown = { sort: 'price_asc' }; }
       }
 
-      // "shirts" search inside the Shirts category matches no product names
       if (!products.length && filters.search && filters.category) {
         delete shown.search;
         products = await runSearch(shown);
         if (products.length) note = 'query';
       }
 
-      // Client-side page search has no synonym table: if we relaxed only the
-      // price filter, "View all" would open a search page that shows nothing.
-      // Point it at the category the matches actually belong to instead.
       if (note === 'price' && shown.search && products.length) {
         const cat = products[0].category;
         shown = cat && cat.slug ? { category: cat.slug, sort: 'price_asc' } : { sort: 'price_asc' };
@@ -371,191 +342,127 @@ async function runStep(step, context, grounding) {
         else delete pageFilters.category;
       }
 
+      const reply = products.length
+        ? `Found ${products.length} match${products.length === 1 ? '' : 'es'} for you.`
+        : 'I could not find anything matching that. Try different words?';
+
       return {
+        reply,
         actions: [{ type: 'render_products', filters: pageFilters, pageUrl: buildPageUrl(pageFilters) }],
         products,
-        empty: products.length === 0,
-        note,
-        query: filters.search || '',
-        requested: { minPrice: filters.minPrice, maxPrice: filters.maxPrice },
       };
     }
 
     case 'open_product': {
-      let product = await findProduct(params.productId);
+      let product = await findProduct(args.productId);
       if (!product) product = await findProduct(productIdFromPath(context.path));
       if (!product) product = await findProduct(context.lastProductId);
-      if (!product && params.name) product = await findProductByName(params.name);
+      if (!product && args.name) product = await findProductByName(args.name);
       if (!product) {
-        return { actions: [], empty: true, miss: 'product' };
+        return { reply: 'I could not find that product. Try searching by name?', actions: [], products: [] };
       }
-      return { actions: [{ type: 'navigate', route: `/products/${product._id}` }] };
+      return {
+        reply: `Opening ${product.name}.`,
+        actions: [{ type: 'navigate', route: `/products/${product._id}` }],
+        products: [],
+      };
     }
 
     case 'browse_category': {
-      const slug = String(params.category || '').toLowerCase();
+      const slug = String(args.category || '').toLowerCase();
       const found = grounding.categories.find((c) => c.slug === slug || c.name.toLowerCase() === slug);
-      if (!found) return { actions: [], empty: true, miss: 'category' };
-      return { actions: [{ type: 'navigate', route: `/productlist/${found.slug}` }] };
+      if (!found) {
+        return { reply: MISS_REPLIES.category, actions: [], products: [] };
+      }
+      return {
+        reply: `Showing ${found.name}.`,
+        actions: [{ type: 'navigate', route: `/productlist/${found.slug}` }],
+        products: [],
+      };
     }
 
     case 'add_to_cart': {
-      if (!context.isAuthenticated) return { actions: [{ type: 'require_auth' }] };
+      if (!context.isAuthenticated) {
+        return { reply: 'Please sign in first to do that.', actions: [{ type: 'require_auth' }], products: [] };
+      }
 
-      let product = await findProduct(params.productId);
-      if (!product) product = await findProductByName(params.name);
+      let product = await findProduct(args.productId);
+      if (!product) product = await findProductByName(args.name);
       if (!product) product = await findProduct(productIdFromPath(context.path));
       if (!product) product = await findProduct(context.lastProductId);
-      if (!product) return { actions: [], empty: true, miss: 'product' };
+      if (!product) {
+        return { reply: MISS_REPLIES.product, actions: [], products: [] };
+      }
 
       const sizes = Array.isArray(product.size) ? product.size.map(String) : [];
       if (!sizes.length) {
-        // cart API requires a size - open the product page instead
-        return { actions: [{ type: 'navigate', route: `/products/${product._id}` }] };
+        return {
+          reply: `This product needs a size. Opening ${product.name}.`,
+          actions: [{ type: 'navigate', route: `/products/${product._id}` }],
+          products: [],
+        };
       }
-      let size = typeof params.size === 'string' ? params.size : '';
+
+      let size = typeof args.size === 'string' ? args.size : '';
       if (!size || !sizes.includes(size)) size = sizes[0];
 
       const stock = product.stock > 0 ? product.stock : 1;
-      const quantity = Math.max(1, Math.min(stock, parseInt(params.quantity, 10) || 1));
+      const quantity = Math.max(1, Math.min(stock, parseInt(args.quantity, 10) || 1));
 
-      return { actions: [{ type: 'add_to_cart', productId: String(product._id), size, quantity }] };
-    }
-
-    case 'open_cart':
-      return { actions: [{ type: 'navigate', route: '/cart' }] };
-
-    case 'go_checkout':
-      if (!context.isAuthenticated) return { actions: [{ type: 'require_auth' }] };
-      return { actions: [{ type: 'navigate', route: '/checkout' }] };
-
-    case 'place_order':
-      if (!context.isAuthenticated) return { actions: [{ type: 'require_auth' }] };
-      if (context.cartCount < 1) return { actions: [], empty: true, miss: 'cart' };
-      return { actions: [{ type: 'place_order', route: '/checkout' }] };
-
-    case 'track_orders':
-      return { actions: [{ type: 'navigate', route: '/orders-tracking' }] };
-
-    case 'show_wishlist':
-      return { actions: [{ type: 'navigate', route: '/wishlist' }] };
-
-    case 'show_stores':
-      return { actions: [{ type: 'navigate', route: '/stores' }] };
-
-    case 'show_bundles':
-      return { actions: [{ type: 'navigate', route: '/bundles' }] };
-
-    case 'show_deals':
-      return { actions: [{ type: 'navigate', route: '/productlist/all?sort=price-low' }] };
-
-    case 'show_home':
-      return { actions: [{ type: 'navigate', route: '/' }] };
-
-    case 'show_profile':
-      return { actions: [{ type: 'navigate', route: '/profile' }] };
-
-    case 'answer':
-      return { actions: [] };
-
-    default:
-      return { actions: [], empty: true, miss: 'tool' };
-  }
-}
-
-const MISS_REPLIES = {
-  category: 'I could not find that category.',
-  cart: 'Your cart is empty. Want me to show you some products first?',
-  tool: 'I could not do that yet - try rephrasing?',
-};
-
-// When a vague reference ("this", "it") cannot be resolved to a real product,
-// never dead-end: fall back to showing products so the customer can pick one.
-const PRODUCT_MISS_REPLY =
-  'Which one did you mean? Pick a product below, then say "add it to cart".';
-
-async function suggestProducts() {
-  try {
-    return await runSearch({ sort: 'popular' });
-  } catch {
-    return [];
-  }
-}
-
-async function executeSteps(parsed, context, grounding) {
-  const steps = (Array.isArray(parsed.steps) ? parsed.steps : [])
-    .filter((s) => s && typeof s === 'object' && TOOLS.includes(s.tool))
-    .slice(0, MAX_STEPS);
-
-  const actions = [];
-  let products = [];
-  let replyOverride = null;
-  let searched = false;
-
-  if (!steps.length) {
-    // Shopping request that arrived with no usable steps - show products anyway
-    const suggestions = await suggestProducts();
-    if (suggestions.length) {
       return {
-        actions: [{ type: 'render_products', filters: {}, pageUrl: '/productlist/all' }],
-        products: suggestions,
-        replyOverride: PRODUCT_MISS_REPLY,
-        tool: 'search_products',
-        searched: true,
+        reply: `Added ${quantity}x ${product.name} (${size}) to cart.`,
+        actions: [{ type: 'add_to_cart', productId: String(product._id), size, quantity }],
+        products: [],
       };
     }
-    return { actions: [{ type: 'none' }], products, replyOverride: null, tool: 'answer' };
-  }
 
-  for (const step of steps) {
-    const result = await runStep(step, context, grounding);
-
-    if (result.miss === 'product') {
-      const suggestions = await suggestProducts();
-      if (suggestions.length) {
-        products = suggestions;
-        actions.push({ type: 'render_products', filters: {}, pageUrl: '/productlist/all' });
-        replyOverride = PRODUCT_MISS_REPLY;
-      } else {
-        actions.push({ type: 'none' });
-        replyOverride = 'I could not find that product. Try searching by name?';
+    case 'place_order': {
+      if (!context.isAuthenticated) {
+        return { reply: 'Please sign in first to do that.', actions: [{ type: 'require_auth' }], products: [] };
       }
-      break;
-    }
-
-    if (result.miss) {
-      replyOverride = MISS_REPLIES[result.miss] || MISS_REPLIES.tool;
-      actions.push({ type: 'none' });
-      break;
-    }
-
-    if (step.tool === 'search_products') {
-      searched = true;
-      products = result.products;
-      if (result.empty) {
-        replyOverride = 'I could not find anything matching that. Try different words?';
-      } else if (result.note === 'price') {
-        const cheapest = Math.min(...products.map((p) => p.price));
-        const asked = result.requested.maxPrice
-          ? `under ${result.requested.maxPrice}`
-          : `above ${result.requested.minPrice}`;
-        replyOverride = `Nothing in our stock is ${asked} (cheapest starts at ${cheapest}). Showing the closest matches instead.`;
-      } else if (result.note === 'query') {
-        replyOverride = `No exact match for "${result.query}" - showing what we do have instead.`;
-      } else if (result.note === 'any') {
-        replyOverride = `No match for that - here is what we do have:`;
-      } else if (!replyOverride) {
-        replyOverride = `Found ${products.length} match${products.length === 1 ? '' : 'es'} for you.`;
+      if (context.cartCount < 1) {
+        return { reply: MISS_REPLIES.cart, actions: [], products: [] };
       }
+      return {
+        reply: 'Proceeding to checkout.',
+        actions: [{ type: 'place_order', route: '/checkout' }],
+        products: [],
+      };
     }
 
-    actions.push(...result.actions);
-    if (actions.length >= MAX_STEPS) break;
+    case 'track_orders': {
+      return { reply: 'Showing your orders.', actions: [{ type: 'navigate', route: '/orders-tracking' }], products: [] };
+    }
+
+    case 'show_wishlist': {
+      return { reply: 'Showing your wishlist.', actions: [{ type: 'navigate', route: '/wishlist' }], products: [] };
+    }
+
+    case 'show_stores': {
+      return { reply: 'Showing all stores.', actions: [{ type: 'navigate', route: '/stores' }], products: [] };
+    }
+
+    case 'show_bundles': {
+      return { reply: 'Showing bundles and deals.', actions: [{ type: 'navigate', route: '/bundles' }], products: [] };
+    }
+
+    case 'answer': {
+      const page = typeof args.page === 'string' ? args.page : '';
+      const route = ANSWER_ROUTES[page];
+      if (route) {
+        return {
+          reply: `Taking you to ${page}.`,
+          actions: [{ type: 'navigate', route }],
+          products: [],
+        };
+      }
+      // Plain text reply (question, refusal, greeting)
+      return { reply: '', actions: [], products: [] };
+    }
+
+    default:
+      return { reply: MISS_REPLIES.tool, actions: [], products: [] };
   }
-
-  if (!actions.length) actions.push({ type: 'none' });
-
-  return { actions: actions.slice(0, MAX_STEPS), products, replyOverride, tool: steps[0].tool, searched };
 }
 
 /* ---------------------------------------------------------- entry point */
@@ -570,21 +477,38 @@ exports.handleMessage = async (req, res) => {
 
     const context = sanitizeContext(body.context);
     if (req.user && req.user.id) context.isAuthenticated = true;
+
     const grounding = await buildGrounding();
-    const parsed = await parseSteps(message, context, grounding);
+    const systemPrompt = buildSystemPrompt(grounding, context);
 
-    const executed = await executeSteps(parsed, context, grounding);
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: message },
+    ];
 
-    // guards win over the model's reply
-    let reply = executed.replyOverride || parsed.reply || '';
-    if (executed.actions[0].type === 'require_auth') reply = 'Please sign in first to do that.';
-    if (!reply) reply = 'Done.';
+    const toolExecutor = async (name, args) => {
+      return executeTool(name, args, context, grounding);
+    };
+
+    const result = await runAssistantWithRetry({
+      messages,
+      tools: TOOLS,
+      toolExecutor,
+      timeoutMs: 9000,
+      maxSteps: MAX_STEPS,
+    });
+
+    let reply = result.reply || '';
+    if (reply === '') reply = 'Done.';
+    if (result.actions[0] && result.actions[0].type === 'require_auth') {
+      reply = 'Please sign in first to do that.';
+    }
 
     return res.status(200).json({
       reply,
-      actions: executed.actions,
-      products: executed.products,
-      meta: { intent: executed.tool },
+      actions: result.actions,
+      products: result.products,
+      meta: { toolCalls: result.meta.toolCalls, steps: result.meta.steps },
     });
   } catch (err) {
     if (err instanceof GroqError) {
