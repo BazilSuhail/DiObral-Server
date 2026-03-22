@@ -1,26 +1,13 @@
 # DiObral Server
 
-![Express.js](https://img.shields.io/badge/Express.js-5.2.1-%23000000.svg?style=for-the-badge&logo=express&logoColor=white)
-![Mongoose](https://img.shields.io/badge/Mongoose-9.10.4-%23880000.svg?style=for-the-badge&logo=mongoose&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)
-![JWT](https://img.shields.io/badge/JWT-9.0.3-%23000000.svg?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
-![bcryptjs](https://img.shields.io/badge/bcryptjs-3.0.3-%236fa05c.svg?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![Stripe](https://img.shields.io/badge/Stripe-22.6.2-%23635BFF.svg?style=for-the-badge&logo=stripe&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-AI_API-%23000000.svg?style=for-the-badge&logo=groq&logoColor=white)
-![Multer](https://img.shields.io/badge/Multer-2.4.0-%23ff0000.svg?style=for-the-badge&logo=multer&logoColor=white)
-![express-rate-limit](https://img.shields.io/badge/express--rate--limit-8.7.0-%23000000.svg?style=for-the-badge&logo=npm&logoColor=white)
-![express-validator](https://img.shields.io/badge/express--validator-7.3.2-%23d63384.svg?style=for-the-badge&logo=npm&logoColor=white)
-![CORS](https://img.shields.io/badge/CORS-2.8.6-%23635bff.svg?style=for-the-badge&logo=googlechrome&logoColor=white)
-![body-parser](https://img.shields.io/badge/body--parser-2.3.0-%23563d7c.svg?style=for-the-badge&logo=npm&logoColor=white)
-![dotenv](https://img.shields.io/badge/dotenv-17.4.2-%23e35f14.svg?style=for-the-badge&logo=dotenv&logoColor=white)
-![nodemon](https://img.shields.io/badge/nodemon-3.1.14-%2376d04b.svg?style=for-the-badge&logo=nodemon&logoColor=white)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)](package.json)
+[![API](https://img.shields.io/badge/API-REST-2b5797?style=flat-square&logo=fastapi&logoColor=white)](#api-routes)
+[![License: Bazil Suhail Hobby](https://img.shields.io/badge/License-Bazil_Suhail_Hobby-yellow?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#contributing)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen?style=flat-square)](#)
+[![GitHub](https://img.shields.io/badge/GitHub-BazilSuhail-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/BazilSuhail/)
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)](package.json)
-[![API](https://img.shields.io/badge/API-REST-2b5797.svg?style=for-the-badge&logo=fastapi&logoColor=white)](#api-routes)
-[![License: Bazil Suhail Hobby](https://img.shields.io/badge/License-Bazil_Suhail_Hobby-yellow.svg?style=for-the-badge)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](#contributing)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-brightgreen.svg?style=for-the-badge)](#)
-[![GitHub](https://img.shields.io/badge/GitHub-BazilSuhail-181717.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/BazilSuhail/)
+---
 
 **Author:** [**Bazil Suhail**](https://github.com/BazilSuhail/)
 
@@ -35,6 +22,26 @@
 > ### 💡 Looking for the diagrams?
 > Head straight to the **[Mermaid Diagrams →](#mermaid-diagrams)** section at the very end of this README —
 > or <a href="#mermaid-diagrams" title="System Architecture · Request Lifecycle · Order Lifecycle · Domain Model">hover here &amp; click to jump to the 4 Mermaid diagrams&nbsp;→</a>
+
+---
+
+
+## The Stack
+
+[![Express.js](https://img.shields.io/badge/Express.js-5.2.1-000000?style=flat-square&logo=express&logoColor=white)](https://expressjs.com/)
+[![Mongoose](https://img.shields.io/badge/Mongoose-9.10.4-880000?style=flat-square&logo=mongoose&logoColor=white)](https://mongoosejs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-4ea94b?style=flat-square&logo=mongodb&logoColor=white)](https://www.mongodb.com/atlas)
+[![JWT](https://img.shields.io/badge/JWT-9.0.3-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+[![bcryptjs](https://img.shields.io/badge/bcryptjs-3.0.3-6fa05c?style=flat-square&logo=nodedotjs&logoColor=white)](https://www.npmjs.com/package/bcryptjs)
+[![Stripe](https://img.shields.io/badge/Stripe-22.6.2-635BFF?style=flat-square&logo=stripe&logoColor=white)](https://stripe.com/)
+[![Groq](https://img.shields.io/badge/Groq-AI_API-000000?style=flat-square&logo=groq&logoColor=white)](https://groq.com/)
+[![Multer](https://img.shields.io/badge/Multer-2.4.0-ff0000?style=flat-square&logo=multer&logoColor=white)](https://www.npmjs.com/package/multer)
+[![express-rate-limit](https://img.shields.io/badge/express--rate--limit-8.7.0-000000?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/express-rate-limit)
+[![express-validator](https://img.shields.io/badge/express--validator-7.3.2-d63384?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/express-validator)
+[![CORS](https://img.shields.io/badge/CORS-2.8.6-635bff?style=flat-square&logo=googlechrome&logoColor=white)](https://www.npmjs.com/package/cors)
+[![body-parser](https://img.shields.io/badge/body--parser-2.3.0-563d7c?style=flat-square&logo=npm&logoColor=white)](https://www.npmjs.com/package/body-parser)
+[![dotenv](https://img.shields.io/badge/dotenv-17.4.2-e35f14?style=flat-square&logo=dotenv&logoColor=white)](https://www.npmjs.com/package/dotenv)
+[![nodemon](https://img.shields.io/badge/nodemon-3.1.14-76d04b?style=flat-square&logo=nodemon&logoColor=white)](https://nodemon.io/)
 
 ---
 
