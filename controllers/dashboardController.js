@@ -4,6 +4,17 @@ const Bundle = require('../models/Bundle');
 const Review = require('../models/Review');
 const Profile = require('../models/Profile');
 
+function monthKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(key) {
+  const [year, month] = key.split('-').map(Number);
+  const d = new Date(year, month - 1, 1);
+  return d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+}
+
 exports.getDashboard = async (req, res) => {
   try {
     const profile = await Profile.findById(req.user.id);
@@ -13,8 +24,7 @@ exports.getDashboard = async (req, res) => {
 
     const storeId = profile.store;
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
 
     const [
       productCount,
@@ -29,44 +39,29 @@ exports.getDashboard = async (req, res) => {
       reviewStats,
       ordersTrend,
     ] = await Promise.all([
-      // Total products
       Product.countDocuments({ store: storeId }),
-
-      // Total bundles
       Bundle.countDocuments({ store: storeId }),
-
-      // Order counts by status
       Order.aggregate([
         { $match: { store: storeId } },
         { $group: { _id: '$status', count: { $sum: 1 } } },
       ]),
-
-      // Revenue last 30 days (delivered)
       Order.aggregate([
-        { $match: { store: storeId, status: 'delivered', createdAt: { $gte: thirtyDaysAgo } } },
+        { $match: { store: storeId, status: 'delivered', createdAt: { $gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } } },
         { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } },
       ]),
-
-      // Revenue last 7 days
       Order.aggregate([
-        { $match: { store: storeId, status: 'delivered', createdAt: { $gte: sevenDaysAgo } } },
+        { $match: { store: storeId, status: 'delivered', createdAt: { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } } },
         { $group: { _id: null, total: { $sum: '$total' }, count: { $sum: 1 } } },
       ]),
-
-      // All-time revenue
       Order.aggregate([
         { $match: { store: storeId, status: 'delivered' } },
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),
-
-      // Recent orders (last 10)
       Order.find({ store: storeId })
         .sort({ createdAt: -1 })
         .limit(10)
         .populate('customer', 'fullName')
         .lean(),
-
-      // Top 5 selling products by total quantity sold
       Order.aggregate([
         { $match: { store: storeId, status: { $ne: 'cancelled' } } },
         { $unwind: '$items' },
@@ -82,14 +77,10 @@ exports.getDashboard = async (req, res) => {
         { $sort: { quantitySold: -1 } },
         { $limit: 5 },
       ]),
-
-      // Low stock products (stock <= 5)
       Product.find({ store: storeId, stock: { $lte: 5 } })
         .select('name stock image price')
         .sort({ stock: 1 })
         .lean(),
-
-      // Average rating
       Review.aggregate([
         {
           $lookup: {
@@ -103,13 +94,11 @@ exports.getDashboard = async (req, res) => {
         { $match: { 'product.store': storeId } },
         { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
       ]),
-
-      // Daily orders trend (last 7 days)
       Order.aggregate([
-        { $match: { store: storeId, createdAt: { $gte: sevenDaysAgo } } },
+        { $match: { store: storeId, createdAt: { $gte: twelveMonthsAgo } } },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: { $dateToString: { format: '%Y-%m', date: '$createdAt' } },
             orders: { $sum: 1 },
             revenue: { $sum: '$total' },
           },
@@ -118,9 +107,17 @@ exports.getDashboard = async (req, res) => {
       ]),
     ]);
 
-    // Build status map
     const statusMap = { pending: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 };
     orderStats.forEach((s) => { statusMap[s._id] = s.count; });
+
+    const monthlyTrend = ordersTrend
+      .map((d) => ({
+        month: monthLabel(d._id),
+        key: d._id,
+        orders: d.orders,
+        revenue: d.revenue,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key));
 
     res.status(200).json({
       products: {
@@ -149,11 +146,7 @@ exports.getDashboard = async (req, res) => {
         total: reviewStats[0]?.count || 0,
       },
       trends: {
-        daily: ordersTrend.map((d) => ({
-          date: d._id,
-          orders: d.orders,
-          revenue: d.revenue,
-        })),
+        monthly: monthlyTrend,
       },
     });
   } catch (error) {
